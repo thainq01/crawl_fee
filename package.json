@@ -1,0 +1,28 @@
+{
+  "name": "bsc-event-tester",
+  "version": "1.0.0",
+  "description": "Tool to test and monitor DevGovFeeCharged events on BSC",
+  "main": "index.js",
+  "scripts": {
+    "listen": "node listen-events-polling.js",
+    "listen-ws": "node listen-events.js",
+    "history": "node query-history.js",
+    "test": "node test-events.js"
+  },
+  "dependencies": {
+    "web3": "^4.3.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": [
+    "bsc",
+    "binance-smart-chain",
+    "events",
+    "web3",
+    "ethereum"
+  ],
+  "author": "",
+  "license": "MIT"
+}
