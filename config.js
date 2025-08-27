@@ -10,8 +10,8 @@ module.exports = {
     process.env.CONTRACT_ADDRESS ||
     "0x239B4dBf964dF383ae79c4fAE2bBD92438cEB1aD",
 
-  // Event ABI for DevGovFeeCharged
-  EVENT_ABI: {
+  // Event ABIs
+  DEV_GOV_FEE_EVENT_ABI: {
     anonymous: false,
     inputs: [
       {
@@ -37,7 +37,115 @@ module.exports = {
     type: "event",
   },
 
-  // Contract ABI (minimal - just the event)
+  MARKET_EXECUTED_EVENT_ABI: {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "orderId",
+        type: "uint256"
+      },
+      {
+        components: [
+          {
+            internalType: "address",
+            name: "trader",
+            type: "address"
+          },
+          {
+            internalType: "uint256",
+            name: "pairIndex",
+            type: "uint256"
+          },
+          {
+            internalType: "uint256",
+            name: "index",
+            type: "uint256"
+          },
+          {
+            internalType: "uint256",
+            name: "initialPosToken",
+            type: "uint256"
+          },
+          {
+            internalType: "uint256",
+            name: "positionSizeUsdc",
+            type: "uint256"
+          },
+          {
+            internalType: "uint256",
+            name: "openPrice",
+            type: "uint256"
+          },
+          {
+            internalType: "bool",
+            name: "buy",
+            type: "bool"
+          },
+          {
+            internalType: "uint256",
+            name: "leverage",
+            type: "uint256"
+          },
+          {
+            internalType: "uint256",
+            name: "tp",
+            type: "uint256"
+          },
+          {
+            internalType: "uint256",
+            name: "sl",
+            type: "uint256"
+          }
+        ],
+        indexed: false,
+        internalType: "struct StorageInterfaceV5.Trade",
+        name: "t",
+        type: "tuple"
+      },
+      {
+        indexed: false,
+        internalType: "bool",
+        name: "open",
+        type: "bool"
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "price",
+        type: "uint256"
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "priceImpactP",
+        type: "uint256"
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "positionSizeUsdc",
+        type: "uint256"
+      },
+      {
+        indexed: false,
+        internalType: "int256",
+        name: "percentProfit",
+        type: "int256"
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "usdcSentToTrader",
+        type: "uint256"
+      }
+    ],
+    name: "MarketExecuted",
+    type: "event",
+  },
+
+  // Contract ABI (minimal - both events)
   CONTRACT_ABI: [
     {
       anonymous: false,
@@ -64,9 +172,116 @@ module.exports = {
       name: "DevGovFeeCharged",
       type: "event",
     },
+    {
+      anonymous: false,
+      inputs: [
+        {
+          indexed: true,
+          internalType: "uint256",
+          name: "orderId",
+          type: "uint256"
+        },
+        {
+          components: [
+            {
+              internalType: "address",
+              name: "trader",
+              type: "address"
+            },
+            {
+              internalType: "uint256",
+              name: "pairIndex",
+              type: "uint256"
+            },
+            {
+              internalType: "uint256",
+              name: "index",
+              type: "uint256"
+            },
+            {
+              internalType: "uint256",
+              name: "initialPosToken",
+              type: "uint256"
+            },
+            {
+              internalType: "uint256",
+              name: "positionSizeUsdc",
+              type: "uint256"
+            },
+            {
+              internalType: "uint256",
+              name: "openPrice",
+              type: "uint256"
+            },
+            {
+              internalType: "bool",
+              name: "buy",
+              type: "bool"
+            },
+            {
+              internalType: "uint256",
+              name: "leverage",
+              type: "uint256"
+            },
+            {
+              internalType: "uint256",
+              name: "tp",
+              type: "uint256"
+            },
+            {
+              internalType: "uint256",
+              name: "sl",
+              type: "uint256"
+            }
+          ],
+          indexed: false,
+          internalType: "struct StorageInterfaceV5.Trade",
+          name: "t",
+          type: "tuple"
+        },
+        {
+          indexed: false,
+          internalType: "bool",
+          name: "open",
+          type: "bool"
+        },
+        {
+          indexed: false,
+          internalType: "uint256",
+          name: "price",
+          type: "uint256"
+        },
+        {
+          indexed: false,
+          internalType: "uint256",
+          name: "priceImpactP",
+          type: "uint256"
+        },
+        {
+          indexed: false,
+          internalType: "uint256",
+          name: "positionSizeUsdc",
+          type: "uint256"
+        },
+        {
+          indexed: false,
+          internalType: "int256",
+          name: "percentProfit",
+          type: "int256"
+        },
+        {
+          indexed: false,
+          internalType: "uint256",
+          name: "usdcSentToTrader",
+          type: "uint256"
+        }
+      ],
+      name: "MarketExecuted",
+      type: "event",
+    },
   ],
 
   // Block range settings
-  START_BLOCK: process.env.START_BLOCK || "56845886",
+  START_BLOCK: process.env.START_BLOCK || "58941918",
   END_BLOCK: process.env.END_BLOCK || "latest",
 };

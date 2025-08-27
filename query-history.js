@@ -10,14 +10,15 @@ const contract = new web3.eth.Contract(
   config.CONTRACT_ADDRESS
 );
 
-// Function to format event data nicely
-function formatEventData(event) {
+// Function to format DevGovFeeCharged event data
+function formatDevGovFeeEventData(event) {
   const { trader, valueUsdc, isPositive } = event.returnValues;
   const blockNumber = event.blockNumber;
   const transactionHash = event.transactionHash;
   const logIndex = event.logIndex;
 
   return {
+    eventType: "DevGovFeeCharged",
     blockNumber,
     transactionHash,
     logIndex,
@@ -25,6 +26,50 @@ function formatEventData(event) {
     valueUsdc: web3.utils.fromWei(valueUsdc, "mwei"), // Convert from wei to USDC (6 decimals)
     valueUsdcRaw: valueUsdc,
     isPositive,
+    bscscanUrl: `https://bscscan.com/tx/${transactionHash}`,
+  };
+}
+
+// Function to format MarketExecuted event data
+function formatMarketExecutedEventData(event) {
+  const { orderId, t, open, price, priceImpactP, positionSizeUsdc, percentProfit, usdcSentToTrader } = event.returnValues;
+  const blockNumber = event.blockNumber;
+  const transactionHash = event.transactionHash;
+  const logIndex = event.logIndex;
+
+  return {
+    eventType: "MarketExecuted",
+    blockNumber,
+    transactionHash,
+    logIndex,
+    orderId,
+    trade: {
+      trader: t.trader,
+      pairIndex: t.pairIndex,
+      index: t.index,
+      initialPosToken: web3.utils.fromWei(t.initialPosToken, "ether"),
+      initialPosTokenRaw: t.initialPosToken,
+      positionSizeUsdc: web3.utils.fromWei(t.positionSizeUsdc, "mwei"),
+      positionSizeUsdcRaw: t.positionSizeUsdc,
+      openPrice: web3.utils.fromWei(t.openPrice, "ether"),
+      openPriceRaw: t.openPrice,
+      buy: t.buy,
+      leverage: t.leverage,
+      tp: web3.utils.fromWei(t.tp, "ether"),
+      tpRaw: t.tp,
+      sl: web3.utils.fromWei(t.sl, "ether"),
+      slRaw: t.sl
+    },
+    open,
+    price: web3.utils.fromWei(price, "ether"),
+    priceRaw: price,
+    priceImpactP: web3.utils.fromWei(priceImpactP, "ether"),
+    priceImpactPRaw: priceImpactP,
+    positionSizeUsdc: web3.utils.fromWei(positionSizeUsdc, "mwei"),
+    positionSizeUsdcRaw: positionSizeUsdc,
+    percentProfit: percentProfit.toString(),
+    usdcSentToTrader: web3.utils.fromWei(usdcSentToTrader, "mwei"),
+    usdcSentToTraderRaw: usdcSentToTrader,
     bscscanUrl: `https://bscscan.com/tx/${transactionHash}`,
   };
 }
@@ -42,7 +87,7 @@ async function getBlockTimestamp(blockNumber) {
 // Query historical events
 async function queryHistoricalEvents() {
   try {
-    console.log("🔍 Querying Historical DevGovFeeCharged Events");
+    console.log("🔍 Querying Historical DevGovFeeCharged and MarketExecuted Events");
     console.log("📋 Contract Address:", config.CONTRACT_ADDRESS);
     console.log("🌐 RPC URL:", config.BSC_RPC_URL);
 
@@ -86,10 +131,19 @@ async function queryHistoricalEvents() {
       );
 
       try {
-        const chunkEvents = await contract.getPastEvents("DevGovFeeCharged", {
+        // Get DevGovFeeCharged events
+        const devGovFeeEvents = await contract.getPastEvents("DevGovFeeCharged", {
           fromBlock: currentFromBlock.toString(),
           toBlock: currentToBlock.toString(),
         });
+
+        // Get MarketExecuted events
+        const marketExecutedEvents = await contract.getPastEvents("MarketExecuted", {
+          fromBlock: currentFromBlock.toString(),
+          toBlock: currentToBlock.toString(),
+        });
+
+        const chunkEvents = [...devGovFeeEvents, ...marketExecutedEvents];
 
         allEvents = allEvents.concat(chunkEvents);
         console.log(`   ✅ Found ${chunkEvents.length} events in this chunk`);
@@ -118,13 +172,25 @@ async function queryHistoricalEvents() {
                 : retryFromBlock + BigInt(smallerChunkSize) - BigInt(1);
 
             try {
-              const retryEvents = await contract.getPastEvents(
+              // Get DevGovFeeCharged events
+              const retryDevGovFeeEvents = await contract.getPastEvents(
                 "DevGovFeeCharged",
                 {
                   fromBlock: retryFromBlock.toString(),
                   toBlock: retryToBlock.toString(),
                 }
               );
+
+              // Get MarketExecuted events
+              const retryMarketExecutedEvents = await contract.getPastEvents(
+                "MarketExecuted",
+                {
+                  fromBlock: retryFromBlock.toString(),
+                  toBlock: retryToBlock.toString(),
+                }
+              );
+
+              const retryEvents = [...retryDevGovFeeEvents, ...retryMarketExecutedEvents];
 
               allEvents = allEvents.concat(retryEvents);
               await new Promise((resolve) => setTimeout(resolve, 200));
@@ -145,7 +211,7 @@ async function queryHistoricalEvents() {
 
     const events = allEvents;
 
-    console.log(`✅ Found ${events.length} DevGovFeeCharged events\n`);
+    console.log(`✅ Found ${events.length} total events (DevGovFeeCharged + MarketExecuted)\n`);
 
     if (events.length === 0) {
       console.log("ℹ️  No events found in the specified block range.");
@@ -158,42 +224,85 @@ async function queryHistoricalEvents() {
     // Display events
     for (let i = 0; i < events.length; i++) {
       const event = events[i];
-      const formattedData = formatEventData(event);
       const timestamp = await getBlockTimestamp(event.blockNumber);
-
-      console.log(`🎯 Event ${i + 1}/${events.length}`);
-      console.log("═══════════════════════════════════════");
-      console.log(`📦 Block: ${formattedData.blockNumber}`);
-      console.log(`⏰ Timestamp: ${timestamp}`);
-      console.log(`🔗 Transaction: ${formattedData.transactionHash}`);
-      console.log(`📋 Log Index: ${formattedData.logIndex}`);
-      console.log(`👤 Trader: ${formattedData.trader}`);
-      console.log(`💰 Value USDC: ${formattedData.valueUsdc}`);
-      console.log(`💰 Value USDC (raw): ${formattedData.valueUsdcRaw}`);
-      console.log(`📈 Is Positive: ${formattedData.isPositive}`);
-      console.log(`🔍 BSCScan: ${formattedData.bscscanUrl}`);
-      console.log("═══════════════════════════════════════\n");
+      
+      // Determine event type and format accordingly
+      if (event.event === "DevGovFeeCharged") {
+        const formattedData = formatDevGovFeeEventData(event);
+        
+        console.log(`🎯 DevGovFeeCharged Event ${i + 1}/${events.length}`);
+        console.log("═══════════════════════════════════════");
+        console.log(`📦 Block: ${formattedData.blockNumber}`);
+        console.log(`⏰ Timestamp: ${timestamp}`);
+        console.log(`🔗 Transaction: ${formattedData.transactionHash}`);
+        console.log(`📋 Log Index: ${formattedData.logIndex}`);
+        console.log(`👤 Trader: ${formattedData.trader}`);
+        console.log(`💰 Value USDC: ${formattedData.valueUsdc}`);
+        console.log(`💰 Value USDC (raw): ${formattedData.valueUsdcRaw}`);
+        console.log(`📈 Is Positive: ${formattedData.isPositive}`);
+        console.log(`🔍 BSCScan: ${formattedData.bscscanUrl}`);
+        console.log("═══════════════════════════════════════\n");
+      } else if (event.event === "MarketExecuted") {
+        const formattedData = formatMarketExecutedEventData(event);
+        
+        console.log(`🎯 MarketExecuted Event ${i + 1}/${events.length}`);
+        console.log("═══════════════════════════════════════");
+        console.log(`📦 Block: ${formattedData.blockNumber}`);
+        console.log(`⏰ Timestamp: ${timestamp}`);
+        console.log(`🔗 Transaction: ${formattedData.transactionHash}`);
+        console.log(`📋 Log Index: ${formattedData.logIndex}`);
+        console.log(`🆔 Order ID: ${formattedData.orderId}`);
+        console.log(`👤 Trader: ${formattedData.trade.trader}`);
+        console.log(`📈 Pair Index: ${formattedData.trade.pairIndex}`);
+        console.log(`📊 Position Index: ${formattedData.trade.index}`);
+        console.log(`💰 Position Size USDC: ${formattedData.positionSizeUsdc}`);
+        console.log(`📊 Open Price: ${formattedData.trade.openPrice}`);
+        console.log(`🔄 Buy: ${formattedData.trade.buy}`);
+        console.log(`⚡ Leverage: ${formattedData.trade.leverage}`);
+        console.log(`🎯 Take Profit: ${formattedData.trade.tp}`);
+        console.log(`🛑 Stop Loss: ${formattedData.trade.sl}`);
+        console.log(`🔓 Open: ${formattedData.open}`);
+        console.log(`💵 Execution Price: ${formattedData.price}`);
+        console.log(`📊 Price Impact P: ${formattedData.priceImpactP}`);
+        console.log(`📊 Percent Profit: ${formattedData.percentProfit}`);
+        console.log(`💰 USDC Sent to Trader: ${formattedData.usdcSentToTrader}`);
+        console.log(`🔍 BSCScan: ${formattedData.bscscanUrl}`);
+        console.log("═══════════════════════════════════════\n");
+      }
     }
 
     // Summary statistics
-    const totalValue = events.reduce((sum, event) => {
+    const devGovFeeEvents = events.filter(event => event.event === "DevGovFeeCharged");
+    const marketExecutedEvents = events.filter(event => event.event === "MarketExecuted");
+    
+    const totalValue = devGovFeeEvents.reduce((sum, event) => {
       const value = parseFloat(
         web3.utils.fromWei(event.returnValues.valueUsdc, "mwei")
       );
       return sum + value;
     }, 0);
 
-    const positiveEvents = events.filter(
+    const positiveEvents = devGovFeeEvents.filter(
       (event) => event.returnValues.isPositive
     ).length;
-    const negativeEvents = events.length - positiveEvents;
+    const negativeEvents = devGovFeeEvents.length - positiveEvents;
+
+    const totalMarketExecutedVolume = marketExecutedEvents.reduce((sum, event) => {
+      const value = parseFloat(
+        web3.utils.fromWei(event.returnValues.positionSizeUsdc, "mwei")
+      );
+      return sum + value;
+    }, 0);
 
     console.log("📊 SUMMARY STATISTICS");
     console.log("═══════════════════════════════════════");
     console.log(`📈 Total Events: ${events.length}`);
-    console.log(`✅ Positive Events: ${positiveEvents}`);
-    console.log(`❌ Negative Events: ${negativeEvents}`);
-    console.log(`💰 Total Value: ${totalValue.toFixed(6)} USDC`);
+    console.log(`🎯 DevGovFeeCharged Events: ${devGovFeeEvents.length}`);
+    console.log(`🚀 MarketExecuted Events: ${marketExecutedEvents.length}`);
+    console.log(`✅ Positive Fee Events: ${positiveEvents}`);
+    console.log(`❌ Negative Fee Events: ${negativeEvents}`);
+    console.log(`💰 Total Fee Value: ${totalValue.toFixed(6)} USDC`);
+    console.log(`💰 Total Market Volume: ${totalMarketExecutedVolume.toFixed(6)} USDC`);
     console.log("═══════════════════════════════════════");
   } catch (error) {
     console.error("❌ Error querying historical events:", error);
